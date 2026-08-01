@@ -14379,6 +14379,88 @@ function onPlayerJoin(pid){
   sendMsg(pid, "[Drone] Type !help for drone commands.");
 }
 ```
+Another example code:
+custom chat tags:
+onPlayerChat (playerId,msg) return false, then re broadcast message like api.broadcastMessage('[TAG/rank]'+' '+api.getEntityName(playerId)+':'+msg)
+
+another example code: 
+it basically adds custom items/categories to shop when you press b.
+onPlayerBoughtShopItem = (playerId, categoryKey, itemKey, userInput, item) => {
+
+    if (categoryKey === "Shop" && itemKey === "shop_button") {
+        const shopPosition = [0, 0, 0]
+
+        api.sendMessage(playerId, "Teleported to Shop")
+        api.setPosition(playerId, shopPosition)
+    }
+
+    if (categoryKey === "Shop" && itemKey === "iron_sword") {
+        var goldAmount = api.getInventoryItemAmount(playerId, "Gold Coin")
+
+       if(goldAmount >= 10){
+        api.giveItem(playerId, "Iron Sword")
+        api.removeItemName(playerId, "Gold Coin", 10)
+        api.sendMessage(playerId, "Iron Sword Bought", {color: "lime"})
+       }else{
+      api.sendMessage(playerId, "You do not have enough Gold Coins!", {color: "red"})
+      }
+    }
+
+    if (categoryKey === "Shop" && itemKey === "block_selector") {
+
+ api.giveItem(playerId, item)
+
+    }
+}
+
+Here is the first Shop code (buy sword):
+
+api.createShopItem("Shop", "iron_sword", {
+    image: "Iron Sword",
+    customTitle: "Iron Sword",
+    description: "A strong iron sword. Costs: 10 Gold Coins",
+    buyButtonText: "Buy Sword",
+    sortPriority: 10
+})
+
+Here is the second Shop code (teleport):
+
+api.createShopItem("Shop", "shop_button", {
+    image: "Compass",
+    customTitle: "Shop",
+    description: "Teleport to the shop area.",
+    buyButtonText: "Teleport",
+    sortPriority: 99
+})
+
+Here is the third Shop code (select block):
+
+api.createShopItem("Shop", "block_selector", {
+    image: "INTERNAL_MESH_Diamond Trophy",
+    customTitle: "Select Block",
+    description: "Choose which block to get",
+    buyButtonText: "Select",
+    sortPriority: 100,
+    isSelected: false,
+    userInput: {
+        type: "dropdown",
+        dropdownOptions: [
+            "Maple Log",
+            "Maple Leaves",
+            "Fruity Maple Leaves"
+        ]
+    }
+})
+
+If you want to remove the shop items here is a code: (only works if you have all of them)
+
+api.deleteShopItem("Shop", "iron_sword")
+api.deleteShopItem("Shop", "shop_button")
+api.deleteShopItem("Shop", "block_selector")
+-----
+here is another example:
+
+
 ============================================
 SMP Helper
 ============================================
