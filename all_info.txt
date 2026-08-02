@@ -14563,3 +14563,35 @@ g=api,gn=g.getEntityName,sm=g.sendMessage,bm=g.broadcastMessage,sco=g.setClientO
 This one features more of a hardcore smp, with kills death best streak tracking, and another method of data saving, using inventory item. moonstone chest data saving is better.
 
 ---
+--
+more example codes:
+
+// dev / super / youtuber rank in chat cool chat tags
+onPlayerChat = (playerId, chatMessage, channelName) => {
+
+    const playerName = api.getEntityName(playerId); 
+	if(playerName === "PLAYER_NAME"){
+    api.broadcastMessage([
+		/*
+        {str:"[", style:{color:"#CEF3FF"}},
+        {icon:"wrench", style:{color:"#A4A4A4"}},
+        {str:" Dev] ", style:{color:"#CEF3FF"}},
+		*/
+        {str:"[", style:{color:"#CEF3FF"}},
+        {icon:"youtube", style:{color:"#FE0000"}},
+        {str:" You", style:{color:"white"}},
+        {str:"Tuber", style:{color:"#FE0000"}},
+        {str:"] ", style:{color:"#CEF3FF"}},
+        {str:"[", style:{color:"#FFCC00"}},
+        {icon:"zap", style:{color:"#FFCC00"}},
+        {str:" Super] ", style:{color:"#FFCC00"}},
+        {str: playerName, style:{color:"blue"}},
+        {str:": " + chatMessage, style:{color:"white"}}
+	]);
+}
+
+    return false;
+};
+
+=======================================================================
+
