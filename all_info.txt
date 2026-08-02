@@ -14595,3 +14595,2119 @@ onPlayerChat = (playerId, chatMessage, channelName) => {
 
 =======================================================================
 
+Another example code, for achievements. doesnt save achiemenets- therefor you can keep earning the same one... needs to be fixed when using.
+api.log("Made by: BluePandaBloxd, Transcribed by: M1DNIGHT_SV");
+
+function onPlayerCraft(playerId, itemName, craftingIdx){
+ if(itemName === "Iron Pickaxe"){
+api.sendTopRightHelper(playerId, "crown", "Advancement Made! Isn't it iron pick?", {duration:5, height:85, width:300, color:"#32c433", iconSizeMult:1, textAndIconColor:"#FFFFFF", fontSize:"18px"})
+ }
+ if(itemName === "Wood Hang Glider" || itemName === "Iron Hang Glider" || itemName === "Gold Hang Glider" || itemName === "Diamond Hang Glider"){
+api.sendTopRightHelper(playerId, "crown", "Advancement Made! Sky's The Limit", {duration:5, height:85, width:300, color:"#e024e8", iconSizeMult:1, textAndIconColor:"#FFFFFF", fontSize:"18px"})
+ }
+}
+
+function onPlayerPickedUpItem(playerId, itemName, itemAmount){
+ if(itemName === "Diamond"){
+  api.sendTopRightHelper(playerId, "crown", "Advancement Made! Diamonds!", {duration:5, height:85, width:300, color:"#2cc3d9", iconSizeMult:1, textAndIconColor:"#FFFFFF", fontSize:"18px"})
+ }
+ else if(itemName === "Lava Bucket"){
+  api.sendTopRightHelper(playerId, "crown", "Advancement Made! Hot Stuff!", {duration:5, height:85, width:300, color:"#f08e11", iconSizeMult:1, textAndIconColor:"#FFFFFF", fontSize:"18px"})
+ }
+ else if(itemName === "Moonstone"){
+  api.sendTopRightHelper(playerId, "crown", "Advancement Made! To The Moon!", {duration:5, height:85, width:300, color:"#a3d7f7", iconSizeMult:1, textAndIconColor:"#FFFFFF", fontSize:"18px"})
+ }
+}
+
+
+
+const playerMinedAchievements = {};
+
+function onPlayerMine(playerId, blockName) {
+  // Initialize player record if not present
+  if (!playerMinedAchievements[playerId]) {
+    playerMinedAchievements[playerId] = {};
+  }
+
+  // Diamond Mining Achievement
+  if (blockName === "Diamond Ore" && !playerMinedAchievements[playerId]["MinedDiamond"]) {
+    api.sendTopRightHelper(playerId, "crown", "Advancement Made! Diamonds!", {
+      duration: 5,
+      height: 85,
+      width: 300,
+      color: "#00c0ff",
+      iconSizeMult: 1,
+      textAndIconColor: "#FFFFFF",
+      fontSize: "18px"
+    });
+    playerMinedAchievements[playerId]["MinedDiamond"] = true;
+  }
+}
+========================================
+Just some more information for coding for sounds:
+Purpose and Scope
+
+The Music System enables playback of MIDI-based songs in the game world by converting MIDI note data into scheduled sound events. The system uses a time-based queue to sequence notes and the game's tick loop to render audio at the correct timing.
+
+This document covers the MIDI-to-frequency conversion algorithm, note scheduling queue, and tick-based playback mechanism. For player-triggered sound effects and particle systems, see 5.1. For general event system concepts, see 2.1.
+
+Sources:
+txts/music code1-54
+System Architecture
+
+The Music System consists of three main components: a MIDI conversion layer that translates note numbers to playback rates, a scheduling queue that stores notes with timestamps, and a tick-based renderer that plays notes when their scheduled time arrives.
+Architecture Diagram
+
+Sources:
+txts/music code1-54
+MIDI-to-Frequency Conversion
+
+The system implements standard MIDI note conversion using the equal temperament tuning system. MIDI note 69 (A4) corresponds to 440 Hz, and each semitone represents a frequency ratio of 2^(1/12).
+Conversion Algorithm
+
+The calcFreq function implements the MIDI-to-frequency formula:
+
+frequency = 2^((midiNote - 69) / 12) * 440
+
+The calcRate function then converts this frequency to a playback rate relative to the configured reference pitch:
+
+playbackRate = frequency / REF_PITCH
+
+Where REF_PITCH = 144.73 * (2 ^ -Octave)
+txts/music code7
+Configuration	Purpose	Default Value
+Octave	Adjusts pitch range of all notes	-2
+REF_PITCH	Base frequency for rate calculation	144.73 * 2^2 = 578.92 Hz
+Instrument	Sound asset identifier	"harp_pling"
+Conversion Function Implementations
+
+Sources:
+txts/music code12-17
+Note Scheduling and Queue Management
+
+The system uses a queue-based approach where song notes are preprocessed and stored with timing information, then consumed by the tick loop as time advances.
+Note Data Structure
+
+Each note in the notesPlaying array contains:
+Field	Type	Purpose
+time	Number	Time in seconds until note should play (negative = past due)
+midi	Number	MIDI note number (0-127)
+velocity	Number	Volume/intensity of the note (0.0-1.0)
+playerId	Number	Player ID associated with this note
+Queue Processing Flow
+
+The playSong function adds notes to the queue by mapping over the input song array and appending a playerId field
+txts/music code21-32 The songStopped flag is reset to 0 when a new song starts
+txts/music code23
+
+Sources:
+txts/music code19-32
+Tick-Based Playback
+
+The tick function is called every frame with a delta time (dt) in milliseconds. It advances time for all queued notes and triggers playback when notes reach their scheduled time.
+Playback Algorithm
+
+The tick loop processes notes in three steps:
+
+    Time Advancement: Subtract dt / 1000 from each note's time field to convert milliseconds to seconds
+    txts/music code35-38
+
+    Note Triggering: Iterate through the queue and play all notes where time < 0 using api.broadcastSound(Instrument, velocity, playbackRate)
+    txts/music code40-48
+
+    Queue Cleanup: Remove all played notes from the queue using array slicing
+    txts/music code50-52
+
+Tick Processing Flowchart
+
+The loop breaks at the first note that is not yet due to play
+txts/music code45-47 This optimization assumes notes are sorted by time, allowing the function to stop processing once it encounters a future note.
+
+Sources:
+txts/music code34-53
+Configuration Options
+
+The system provides three global configuration variables that affect playback characteristics:
+Global Configuration Variables
+Variable	Location	Type	Default	Effect
+Instrument	Line 5	String	"harp_pling"	Selects the sound asset used for all notes
+Octave	Line 6	Number	-2	Shifts pitch range up (+) or down (-) by octaves
+REF_PITCH	Line 7	Number	144.73 * (2 ** -Octave)	Calculated reference frequency for rate conversion
+Stateful Variables
+Variable	Location	Type	Purpose
+rs	Line 3	Number	Reserved (unused in current implementation)
+songStopped	Line 4	Number	Flag indicating if song playback has stopped (0 = playing, 1 = stopped)
+notesPlaying	Line 19	Array	Queue of notes scheduled for playback
+
+The songStopped flag is set when the tick loop encounters a note that is not yet due
+txts/music code46 This flag can be checked by other systems to determine playback state.
+
+Sources:
+txts/music code3-7
+txts/music code19
+Usage Pattern
+
+To use the Music System, songs must be provided as arrays of note objects. Each note object contains timing, pitch, and volume information.
+Song Data Format
+
+// Example song structure
+const exampleSong = [
+    { time: 0.0, midi: 60, velocity: 1.0 },   // Middle C at t=0s
+    { time: 0.5, midi: 64, velocity: 0.8 },   // E at t=0.5s
+    { time: 1.0, midi: 67, velocity: 0.9 }    // G at t=1.0s
+];
+
+Playback Initialization
+
+The convenience function p(s) wraps playSong to play songs for the current player (myId)
+txts/music code9-10:
+
+p(exampleSong);  // Starts playing the song
+
+Integration with Player Join
+
+The system initializes player position on join
+txts/music code1-2:
+
+function onPlayerJoin(id) {
+    api.setPosition(id, [-51, 1, 35]);
+}
+
+This positions players at a specific location, likely intended as a music venue or listening area.
+
+Sources:
+txts/music code1-2
+txts/music code9-10
+Key Implementation Details
+Time Units
+
+The system uses two time units:
+
+    Milliseconds (dt): Delta time passed to tick function
+    Seconds (note.time): Time values in note objects and queue
+
+Conversion occurs at
+txts/music code37 where dt / 1000 converts milliseconds to seconds.
+Playback Rate Calculation
+
+The playback rate determines pitch. For MIDI note 60 (Middle C = 261.63 Hz) with default settings:
+
+REF_PITCH = 144.73 * (2 ^ 2) = 578.92 Hz
+Frequency = 261.63 Hz
+Rate = 261.63 / 578.92 = 0.452
+
+This rate is passed to api.broadcastSound which adjusts the audio sample's playback speed to achieve the desired pitch.
+Queue Assumptions
+
+The implementation assumes notes are pre-sorted by time in ascending order. The tick loop optimization at
+txts/music code45-47 breaks early when encountering a future note, which would fail to play subsequent past-due notes if the queue were unsorted.
+and here is an usage example for the sounds:
+function onPlayerJoin(id){
+api.setPosition(id, [-51, 1, 35])}
+rs=0
+songStopped=0
+Instrument="harp_pling"
+Octave=-2
+const REF_PITCH = 144.73*(2**-Octave);
+
+function p(s) {
+playSong(myId, s)};
+
+function calcFreq(midiNote) {
+    return Math.pow(2, (midiNote - 69) / 12) * 440;
+};
+function calcRate(midiNote) {
+    return calcFreq(midiNote) / REF_PITCH;
+}
+
+let notesPlaying = []
+
+function playSong(playerId, song) {
+
+songStopped=0
+
+  if(songStopped == 0) {
+    notesPlaying = notesPlaying.concat(song
+        .map(note => ({
+            ...note
+            , playerId
+        })));
+  };
+};
+
+tick = (dt) => {
+    notesPlaying = notesPlaying.map(note => ({
+        ...note
+        , time: note.time - dt / 1000
+    }));
+    let stopIdx = undefined;
+    for (let i = 0; i < notesPlaying.length; i++) {
+        const note = notesPlaying[i];
+        if (note.time < 0) {
+            api.broadcastSound( Instrument, note.velocity, calcRate(note.midi));
+        } else {
+            stopIdx = i;
+            songStopped=1
+            break;
+}}
+    
+    stopIdx ??= notesPlaying.length;
+    
+    notesPlaying = notesPlaying.slice(stopIdx);
+}; 
+========================
+Help when working with meshes and player's skins and stuff:
+Skin Customization Examples
+Relevant source files
+
+Purpose and Scope
+
+This page provides reference implementations for player appearance customization in Bloxd.io worlds. It demonstrates three primary customization techniques: mesh attachments (attaching custom blocks to player body parts), node scaling (resizing player mesh components), and skin changes (applying predefined character skins). These examples are intended for direct use in world lobby code.
+
+For comprehensive world integration examples combining multiple systems, see Full World Code. For general player customization theory and pose control, see Player Customization.
+
+Sources:
+txts/Skins Code1-59
+Customization API Overview
+
+The Bloxd.io API provides three main methods for player appearance modification:
+API Method	Purpose	Scope
+api.updateEntityNodeMeshAttachment()	Attach custom blocks to body parts	Individual mesh nodes
+api.scalePlayerMeshNodes()	Resize player body components	All mesh nodes simultaneously
+api.changePlayerIntoSkin()	Apply predefined character skins	Body part categories (body/legs/head)
+Customization Flow
+
+Sources:
+txts/Skins Code1-59
+Mesh Attachment System
+
+The api.updateEntityNodeMeshAttachment() method attaches custom blocks to specific player body part meshes. This enables armor pieces, accessories, or decorative elements.
+Method Signature
+
+api.updateEntityNodeMeshAttachment(
+    playerId,           // Target player ID
+    meshNodeName,       // Target mesh node (e.g., "ArmRightMesh")
+    attachmentType,     // Attachment type ("BloxdBlock")
+    blockOptions,       // Configuration object
+    positionOffset,     // [x, y, z] position offset
+    rotationOffset      // [x, y, z] rotation offset (radians)
+)
+
+Available Mesh Nodes
+Mesh Node Name	Body Part	Typical Use Cases
+HeadMesh	Head	Helmets, crowns, masks
+ArmRightMesh	Right Arm	Shoulder pads, gauntlets
+ArmLeftMesh	Left Arm	Shields, arm armor
+TorsoNode	Torso	Chest plates (indirect)
+LegLeftMesh	Left Leg	Leg armor
+LegRightMesh	Right Leg	Leg armor
+Block Options Structure
+
+Sources:
+txts/Skins Code7-17
+Attachment Examples
+Right Arm Attachment
+
+The following code attaches a "Tribe Protector" block to the right arm with size 0.3 and position offset:
+
+txts/Skins Code7-9
+
+api.updateEntityNodeMeshAttachment(myId, "ArmRightMesh", "BloxdBlock",
+{blockName:"Tribe Protector", size:.3, meshOffset:[0,0,0]},
+[-0.08,-0.57,0], [0,0,0])
+
+Parameter Breakdown:
+
+    myId: Player identifier (self-reference)
+    "ArmRightMesh": Target right arm mesh node
+    "BloxdBlock": Attachment type for block-based meshes
+    {blockName:"Tribe Protector", size:.3, meshOffset:[0,0,0]}: Block configuration
+    [-0.08,-0.57,0]: Position offset (slightly left, below shoulder)
+    [0,0,0]: No rotation applied
+
+Left Arm Attachment
+
+txts/Skins Code11-13
+
+api.updateEntityNodeMeshAttachment(myId, "ArmLeftMesh", "BloxdBlock",
+{blockName:"Protector", size:.3, meshOffset:[0,0,0]},
+[0.08,-0.57,0], [0,0,0])
+
+Note: Position offset [0.08,-0.57,0] mirrors the right arm, offsetting slightly right for symmetry.
+Head Attachment
+
+txts/Skins Code15-17
+
+api.updateEntityNodeMeshAttachment(myId, "HeadMesh", "BloxdBlock",
+{blockName:"Code Block", size:.67, meshOffset:[0,0,0]},
+[0,0.33,0], [0,0,0])
+
+Parameter Breakdown:
+
+    size:.67: Larger scale for head coverage
+    [0,0.33,0]: Position offset above head center (helmet placement)
+
+Sources:
+txts/Skins Code7-17
+Node Scaling System
+
+The api.scalePlayerMeshNodes() method resizes multiple player mesh nodes simultaneously. This enables proportional body modifications or exaggerated character styles.
+Method Signature
+
+api.scalePlayerMeshNodes(
+    playerId,           // Target player ID
+    scaleConfig         // Object mapping node names to [x, y, z] scale vectors
+)
+
+Scale Configuration Object
+
+Sources:
+txts/Skins Code19-26
+Default Scaling Example
+
+txts/Skins Code19-26
+
+api.scalePlayerMeshNodes(myId, {
+    "TorsoNode": [1,1,1], 
+    "HeadMesh": [1,1,1],
+    "ArmRightMesh": [1,1,1], 
+    "ArmLeftMesh": [1,1,1], 
+    "LegLeftMesh": [1,1,1],
+    "LegRightMesh": [1,1,1],
+});
+
+Purpose: This resets all mesh nodes to default [1,1,1] scale, undoing previous modifications.
+Practical Scaling Patterns
+Effect	Example Configuration	Use Case
+Big Head Mode	"HeadMesh": [2,2,2]	Comedy effect
+Tall Character	"TorsoNode": [1,1.5,1], "LegLeftMesh": [1,1.5,1], "LegRightMesh": [1,1.5,1]	Giant appearance
+Thin Character	"TorsoNode": [0.7,1,0.7], "ArmRightMesh": [0.7,1,0.7], "ArmLeftMesh": [0.7,1,0.7]	Slender appearance
+Child-like	All nodes [0.8,0.8,0.8]	Smaller stature
+Invisible Limbs	Target node [0,0,0]	Body part removal
+
+Sources:
+txts/Skins Code19-26
+Skin Change System
+
+The api.changePlayerIntoSkin() method applies predefined character skins to specific body part categories. Each skin must be applied to three parts: body, legs, and head.
+Method Signature
+
+api.changePlayerIntoSkin(
+    playerId,           // Target player ID
+    bodyPart,           // Part category: "body", "legs", or "head"
+    skinName            // Predefined skin identifier
+)
+
+Available Skins Catalog
+
+Sources:
+txts/Skins Code29-58
+Skin Application Pattern
+
+All skins follow a three-call pattern to apply a complete skin:
+
+api.changePlayerIntoSkin(myId, "body", "SkinName")
+api.changePlayerIntoSkin(myId, "legs", "SkinName")
+api.changePlayerIntoSkin(myId, "head", "SkinName")
+
+Complete Skin Examples
+IronMelon Skin
+
+txts/Skins Code32-34
+
+api.changePlayerIntoSkin(myId, "body", "IronMelon")
+api.changePlayerIntoSkin(myId, "legs", "IronMelon")
+api.changePlayerIntoSkin(myId, "head", "IronMelon")
+
+Wizard Skin
+
+txts/Skins Code36-38
+
+api.changePlayerIntoSkin(myId, "body", "Wizard")
+api.changePlayerIntoSkin(myId, "legs", "Wizard")
+api.changePlayerIntoSkin(myId, "head", "Wizard")
+
+FireWizard Skin
+
+txts/Skins Code40-42
+
+api.changePlayerIntoSkin(myId, "body", "FireWizard")
+api.changePlayerIntoSkin(myId, "legs", "FireWizard")
+api.changePlayerIntoSkin(myId, "head", "FireWizard")
+
+Zombie Skin
+
+txts/Skins Code44-46
+
+api.changePlayerIntoSkin(myId, "body", "Zombie")
+api.changePlayerIntoSkin(myId, "legs", "Zombie")
+api.changePlayerIntoSkin(myId, "head", "Zombie")
+
+TraderOne Skin
+
+txts/Skins Code48-50
+
+api.changePlayerIntoSkin(myId, "body", "TraderOne")
+api.changePlayerIntoSkin(myId, "legs", "TraderOne")
+api.changePlayerIntoSkin(myId, "head", "TraderOne")
+
+TraderTwo Skin
+
+txts/Skins Code52-54
+
+api.changePlayerIntoSkin(myId, "body", "TraderTwo")
+api.changePlayerIntoSkin(myId, "legs", "TraderTwo")
+api.changePlayerIntoSkin(myId, "head", "TraderTwo")
+
+TraderThree Skin
+
+txts/Skins Code56-58
+
+api.changePlayerIntoSkin(myId, "body", "TraderThree")
+api.changePlayerIntoSkin(myId, "legs", "TraderThree")
+api.changePlayerIntoSkin(myId, "head", "TraderThree")
+
+Sources:
+txts/Skins Code32-58
+Complete Customization Example
+
+The following example demonstrates combining all three customization techniques:
+
+Implementation
+
+// Step 1: Apply Wizard base skin
+api.changePlayerIntoSkin(myId, "body", "Wizard")
+api.changePlayerIntoSkin(myId, "legs", "Wizard")
+api.changePlayerIntoSkin(myId, "head", "Wizard")
+ 
+// Step 2: Attach custom block armor
+api.updateEntityNodeMeshAttachment(myId, "ArmRightMesh", "BloxdBlock",
+{blockName:"Tribe Protector", size:.3, meshOffset:[0,0,0]},
+[-0.08,-0.57,0], [0,0,0])
+ 
+api.updateEntityNodeMeshAttachment(myId, "ArmLeftMesh", "BloxdBlock",
+{blockName:"Protector", size:.3, meshOffset:[0,0,0]},
+[0.08,-0.57,0], [0,0,0])
+ 
+api.updateEntityNodeMeshAttachment(myId, "HeadMesh", "BloxdBlock",
+{blockName:"Code Block", size:.67, meshOffset:[0,0,0]},
+[0,0.33,0], [0,0,0])
+ 
+// Step 3: Apply custom scaling for unique proportions
+api.scalePlayerMeshNodes(myId, {
+    "TorsoNode": [1,1,1], 
+    "HeadMesh": [1.5,1.5,1.5],      // Larger head
+    "ArmRightMesh": [1,1.2,1],       // Longer arms
+    "ArmLeftMesh": [1,1.2,1], 
+    "LegLeftMesh": [1,1,1],
+    "LegRightMesh": [1,1,1],
+});
+
+Sources:
+txts/Skins Code1-59
+Usage Guidelines
+Application Timing
+
+Customization methods should be called in the onPlayerJoin event handler to ensure immediate application:
+
+api.on("onPlayerJoin", (id) => {
+    const myId = id;
+    
+    // Apply customizations here
+    api.changePlayerIntoSkin(myId, "body", "IronMelon");
+    // ... additional customizations
+});
+
+Performance Considerations
+Consideration	Recommendation
+Batch Operations	Apply all customizations in sequence without delays
+Update Frequency	Avoid repeated calls; apply once on join
+Attachment Count	Limit to 3-6 attachments per player for performance
+Scale Validation	Use scale factors between 0.1 and 3.0 to avoid visual artifacts
+Common Patterns
+
+Pattern 1: Armor Set
+
+    Attach matching blocks to both arms and head
+    Use consistent size values (e.g., 0.3) for uniform appearance
+    Apply symmetric position offsets for arms
+
+Pattern 2: Class-Based Appearance
+
+    Define preset configurations for each player class
+    Store configurations in objects for reusability
+    Apply based on player role or permission level
+
+Pattern 3: Dynamic Customization
+
+    Change skins based on game state (e.g., team assignment)
+    Update attachments when players acquire items
+    Reset to defaults on death or respawn
+
+Sources:
+txts/Skins Code1-59
+Reference Tables
+Mesh Node Hierarchy
+Node Name	Parent	Z-Index	Customizable
+TorsoNode	Root	0	Yes (scaling only)
+HeadMesh	TorsoNode	1	Yes
+ArmRightMesh	TorsoNode	1	Yes
+ArmLeftMesh	TorsoNode	1	Yes
+LegRightMesh	TorsoNode	1	Yes
+LegLeftMesh	TorsoNode	1	Yes
+Position Offset Coordinate System
+Axis	Direction	Typical Range
+X	Left (-) to Right (+)	-0.5 to 0.5
+Y	Down (-) to Up (+)	-1.0 to 1.0
+Z	Back (-) to Front (+)	-0.5 to 0.5
+Rotation Offset Units
+
+All rotation offsets use radians, not degrees:
+
+    0 radians = 0°
+    π/2 radians ≈ 1.57 = 90°
+    π radians ≈ 3.14 = 180°
+    2π radians ≈ 6.28 = 360°
+Skin Customization Examples
+Relevant source files
+
+Purpose and Scope
+
+This page provides reference implementations for player appearance customization in Bloxd.io worlds. It demonstrates three primary customization techniques: mesh attachments (attaching custom blocks to player body parts), node scaling (resizing player mesh components), and skin changes (applying predefined character skins). These examples are intended for direct use in world lobby code.
+
+For comprehensive world integration examples combining multiple systems, see Full World Code. For general player customization theory and pose control, see Player Customization.
+
+Sources:
+txts/Skins Code1-59
+Customization API Overview
+
+The Bloxd.io API provides three main methods for player appearance modification:
+API Method	Purpose	Scope
+api.updateEntityNodeMeshAttachment()	Attach custom blocks to body parts	Individual mesh nodes
+api.scalePlayerMeshNodes()	Resize player body components	All mesh nodes simultaneously
+api.changePlayerIntoSkin()	Apply predefined character skins	Body part categories (body/legs/head)
+Customization Flow
+
+Sources:
+txts/Skins Code1-59
+Mesh Attachment System
+
+The api.updateEntityNodeMeshAttachment() method attaches custom blocks to specific player body part meshes. This enables armor pieces, accessories, or decorative elements.
+Method Signature
+
+api.updateEntityNodeMeshAttachment(
+    playerId,           // Target player ID
+    meshNodeName,       // Target mesh node (e.g., "ArmRightMesh")
+    attachmentType,     // Attachment type ("BloxdBlock")
+    blockOptions,       // Configuration object
+    positionOffset,     // [x, y, z] position offset
+    rotationOffset      // [x, y, z] rotation offset (radians)
+)
+
+Available Mesh Nodes
+Mesh Node Name	Body Part	Typical Use Cases
+HeadMesh	Head	Helmets, crowns, masks
+ArmRightMesh	Right Arm	Shoulder pads, gauntlets
+ArmLeftMesh	Left Arm	Shields, arm armor
+TorsoNode	Torso	Chest plates (indirect)
+LegLeftMesh	Left Leg	Leg armor
+LegRightMesh	Right Leg	Leg armor
+Block Options Structure
+
+Sources:
+txts/Skins Code7-17
+Attachment Examples
+Right Arm Attachment
+
+The following code attaches a "Tribe Protector" block to the right arm with size 0.3 and position offset:
+
+txts/Skins Code7-9
+
+api.updateEntityNodeMeshAttachment(myId, "ArmRightMesh", "BloxdBlock",
+{blockName:"Tribe Protector", size:.3, meshOffset:[0,0,0]},
+[-0.08,-0.57,0], [0,0,0])
+
+Parameter Breakdown:
+
+    myId: Player identifier (self-reference)
+    "ArmRightMesh": Target right arm mesh node
+    "BloxdBlock": Attachment type for block-based meshes
+    {blockName:"Tribe Protector", size:.3, meshOffset:[0,0,0]}: Block configuration
+    [-0.08,-0.57,0]: Position offset (slightly left, below shoulder)
+    [0,0,0]: No rotation applied
+
+Left Arm Attachment
+
+txts/Skins Code11-13
+
+api.updateEntityNodeMeshAttachment(myId, "ArmLeftMesh", "BloxdBlock",
+{blockName:"Protector", size:.3, meshOffset:[0,0,0]},
+[0.08,-0.57,0], [0,0,0])
+
+Note: Position offset [0.08,-0.57,0] mirrors the right arm, offsetting slightly right for symmetry.
+Head Attachment
+
+txts/Skins Code15-17
+
+api.updateEntityNodeMeshAttachment(myId, "HeadMesh", "BloxdBlock",
+{blockName:"Code Block", size:.67, meshOffset:[0,0,0]},
+[0,0.33,0], [0,0,0])
+
+Parameter Breakdown:
+
+    size:.67: Larger scale for head coverage
+    [0,0.33,0]: Position offset above head center (helmet placement)
+
+Sources:
+txts/Skins Code7-17
+Node Scaling System
+
+The api.scalePlayerMeshNodes() method resizes multiple player mesh nodes simultaneously. This enables proportional body modifications or exaggerated character styles.
+Method Signature
+
+api.scalePlayerMeshNodes(
+    playerId,           // Target player ID
+    scaleConfig         // Object mapping node names to [x, y, z] scale vectors
+)
+
+Scale Configuration Object
+
+Sources:
+txts/Skins Code19-26
+Default Scaling Example
+
+txts/Skins Code19-26
+
+api.scalePlayerMeshNodes(myId, {
+    "TorsoNode": [1,1,1], 
+    "HeadMesh": [1,1,1],
+    "ArmRightMesh": [1,1,1], 
+    "ArmLeftMesh": [1,1,1], 
+    "LegLeftMesh": [1,1,1],
+    "LegRightMesh": [1,1,1],
+});
+
+Purpose: This resets all mesh nodes to default [1,1,1] scale, undoing previous modifications.
+Practical Scaling Patterns
+Effect	Example Configuration	Use Case
+Big Head Mode	"HeadMesh": [2,2,2]	Comedy effect
+Tall Character	"TorsoNode": [1,1.5,1], "LegLeftMesh": [1,1.5,1], "LegRightMesh": [1,1.5,1]	Giant appearance
+Thin Character	"TorsoNode": [0.7,1,0.7], "ArmRightMesh": [0.7,1,0.7], "ArmLeftMesh": [0.7,1,0.7]	Slender appearance
+Child-like	All nodes [0.8,0.8,0.8]	Smaller stature
+Invisible Limbs	Target node [0,0,0]	Body part removal
+
+Sources:
+txts/Skins Code19-26
+Skin Change System
+
+The api.changePlayerIntoSkin() method applies predefined character skins to specific body part categories. Each skin must be applied to three parts: body, legs, and head.
+Method Signature
+
+api.changePlayerIntoSkin(
+    playerId,           // Target player ID
+    bodyPart,           // Part category: "body", "legs", or "head"
+    skinName            // Predefined skin identifier
+)
+
+Available Skins Catalog
+
+Sources:
+txts/Skins Code29-58
+Skin Application Pattern
+
+All skins follow a three-call pattern to apply a complete skin:
+
+api.changePlayerIntoSkin(myId, "body", "SkinName")
+api.changePlayerIntoSkin(myId, "legs", "SkinName")
+api.changePlayerIntoSkin(myId, "head", "SkinName")
+
+Complete Skin Examples
+IronMelon Skin
+
+txts/Skins Code32-34
+
+api.changePlayerIntoSkin(myId, "body", "IronMelon")
+api.changePlayerIntoSkin(myId, "legs", "IronMelon")
+api.changePlayerIntoSkin(myId, "head", "IronMelon")
+
+Wizard Skin
+
+txts/Skins Code36-38
+
+api.changePlayerIntoSkin(myId, "body", "Wizard")
+api.changePlayerIntoSkin(myId, "legs", "Wizard")
+api.changePlayerIntoSkin(myId, "head", "Wizard")
+
+FireWizard Skin
+
+txts/Skins Code40-42
+
+api.changePlayerIntoSkin(myId, "body", "FireWizard")
+api.changePlayerIntoSkin(myId, "legs", "FireWizard")
+api.changePlayerIntoSkin(myId, "head", "FireWizard")
+
+Zombie Skin
+
+txts/Skins Code44-46
+
+api.changePlayerIntoSkin(myId, "body", "Zombie")
+api.changePlayerIntoSkin(myId, "legs", "Zombie")
+api.changePlayerIntoSkin(myId, "head", "Zombie")
+
+TraderOne Skin
+
+txts/Skins Code48-50
+
+api.changePlayerIntoSkin(myId, "body", "TraderOne")
+api.changePlayerIntoSkin(myId, "legs", "TraderOne")
+api.changePlayerIntoSkin(myId, "head", "TraderOne")
+
+TraderTwo Skin
+
+txts/Skins Code52-54
+
+api.changePlayerIntoSkin(myId, "body", "TraderTwo")
+api.changePlayerIntoSkin(myId, "legs", "TraderTwo")
+api.changePlayerIntoSkin(myId, "head", "TraderTwo")
+
+TraderThree Skin
+
+txts/Skins Code56-58
+
+api.changePlayerIntoSkin(myId, "body", "TraderThree")
+api.changePlayerIntoSkin(myId, "legs", "TraderThree")
+api.changePlayerIntoSkin(myId, "head", "TraderThree")
+
+Sources:
+txts/Skins Code32-58
+Complete Customization Example
+
+The following example demonstrates combining all three customization techniques:
+
+Implementation
+
+// Step 1: Apply Wizard base skin
+api.changePlayerIntoSkin(myId, "body", "Wizard")
+api.changePlayerIntoSkin(myId, "legs", "Wizard")
+api.changePlayerIntoSkin(myId, "head", "Wizard")
+ 
+// Step 2: Attach custom block armor
+api.updateEntityNodeMeshAttachment(myId, "ArmRightMesh", "BloxdBlock",
+{blockName:"Tribe Protector", size:.3, meshOffset:[0,0,0]},
+[-0.08,-0.57,0], [0,0,0])
+ 
+api.updateEntityNodeMeshAttachment(myId, "ArmLeftMesh", "BloxdBlock",
+{blockName:"Protector", size:.3, meshOffset:[0,0,0]},
+[0.08,-0.57,0], [0,0,0])
+ 
+api.updateEntityNodeMeshAttachment(myId, "HeadMesh", "BloxdBlock",
+{blockName:"Code Block", size:.67, meshOffset:[0,0,0]},
+[0,0.33,0], [0,0,0])
+ 
+// Step 3: Apply custom scaling for unique proportions
+api.scalePlayerMeshNodes(myId, {
+    "TorsoNode": [1,1,1], 
+    "HeadMesh": [1.5,1.5,1.5],      // Larger head
+    "ArmRightMesh": [1,1.2,1],       // Longer arms
+    "ArmLeftMesh": [1,1.2,1], 
+    "LegLeftMesh": [1,1,1],
+    "LegRightMesh": [1,1,1],
+});
+
+Sources:
+txts/Skins Code1-59
+Usage Guidelines
+Application Timing
+
+Customization methods should be called in the onPlayerJoin event handler to ensure immediate application:
+
+api.on("onPlayerJoin", (id) => {
+    const myId = id;
+    
+    // Apply customizations here
+    api.changePlayerIntoSkin(myId, "body", "IronMelon");
+    // ... additional customizations
+});
+
+Performance Considerations
+Consideration	Recommendation
+Batch Operations	Apply all customizations in sequence without delays
+Update Frequency	Avoid repeated calls; apply once on join
+Attachment Count	Limit to 3-6 attachments per player for performance
+Scale Validation	Use scale factors between 0.1 and 3.0 to avoid visual artifacts
+Common Patterns
+
+Pattern 1: Armor Set
+
+    Attach matching blocks to both arms and head
+    Use consistent size values (e.g., 0.3) for uniform appearance
+    Apply symmetric position offsets for arms
+
+Pattern 2: Class-Based Appearance
+
+    Define preset configurations for each player class
+    Store configurations in objects for reusability
+    Apply based on player role or permission level
+
+Pattern 3: Dynamic Customization
+
+    Change skins based on game state (e.g., team assignment)
+    Update attachments when players acquire items
+    Reset to defaults on death or respawn
+
+Sources:
+txts/Skins Code1-59
+Reference Tables
+Mesh Node Hierarchy
+Node Name	Parent	Z-Index	Customizable
+TorsoNode	Root	0	Yes (scaling only)
+HeadMesh	TorsoNode	1	Yes
+ArmRightMesh	TorsoNode	1	Yes
+ArmLeftMesh	TorsoNode	1	Yes
+LegRightMesh	TorsoNode	1	Yes
+LegLeftMesh	TorsoNode	1	Yes
+Position Offset Coordinate System
+Axis	Direction	Typical Range
+X	Left (-) to Right (+)	-0.5 to 0.5
+Y	Down (-) to Up (+)	-1.0 to 1.0
+Z	Back (-) to Front (+)	-0.5 to 0.5
+Rotation Offset Units
+
+All rotation offsets use radians, not degrees:
+
+    0 radians = 0°
+    π/2 radians ≈ 1.57 = 90°
+    π radians ≈ 3.14 = 180°
+    2π radians ≈ 6.28 = 360°
+/*
+* Transcribed to GitHub by M1DNIGHT_SV
+*/
+
+//Custom blocks as parts of player character
+
+api.updateEntityNodeMeshAttachment(myId, "ArmRightMesh", "BloxdBlock",
+{blockName:"Tribe Protector",size:.3,
+meshOffset:[0,0,0]},[-0.08,-0.57,0],[0,0,0])
+
+api.updateEntityNodeMeshAttachment(myId, "ArmLeftMesh", "BloxdBlock",
+{blockName:"Protector",size:.3,
+meshOffset:[0,0,0]},[0.08,-0.57,0],[0,0,0])
+
+api.updateEntityNodeMeshAttachment(myId, "HeadMesh", "BloxdBlock",
+{blockName:"Code Block",size:.67,
+meshOffset:[0,0,0]},[0,0.33,0],[0,0,0])
+
+api.scalePlayerMeshNodes(myId, {
+"TorsoNode": [1,1,1], 
+"HeadMesh": [1,1,1],
+"ArmRightMesh": [1,1,1], 
+"ArmLeftMesh": [1,1,1], 
+"LegLeftMesh": [1,1,1],
+"LegRightMesh": [1,1,1],
+});
+
+
+// Available skins: IronMelon, Wizard, FireWizard, Zombie, TraderOne, TraderTwo, TraderThree.
+
+//**Only paste one and not the whole code lol**
+api.changePlayerIntoSkin(myId, "body", "IronMelon")
+api.changePlayerIntoSkin(myId, "legs", "IronMelon")
+api.changePlayerIntoSkin(myId, "head", "IronMelon")
+
+api.changePlayerIntoSkin(myId, "body", "Wizard")
+api.changePlayerIntoSkin(myId, "legs", "Wizard")
+api.changePlayerIntoSkin(myId, "head", "Wizard")
+
+api.changePlayerIntoSkin(myId, "body", "FireWizard")
+api.changePlayerIntoSkin(myId, "legs", "FireWizard")
+api.changePlayerIntoSkin(myId, "head", "FireWizard")
+
+api.changePlayerIntoSkin(myId, "body", "Zombie")
+api.changePlayerIntoSkin(myId, "legs", "Zombie")
+api.changePlayerIntoSkin(myId, "head", "Zombie")
+
+api.changePlayerIntoSkin(myId, "body", "TraderOne")
+api.changePlayerIntoSkin(myId, "legs", "TraderOne")
+api.changePlayerIntoSkin(myId, "head", "TraderOne")
+
+api.changePlayerIntoSkin(myId, "body", "TraderTwo")
+api.changePlayerIntoSkin(myId, "legs", "TraderTwo")
+api.changePlayerIntoSkin(myId, "head", "TraderTwo")
+
+api.changePlayerIntoSkin(myId, "body", "TraderThree")
+api.changePlayerIntoSkin(myId, "legs", "TraderThree")
+api.changePlayerIntoSkin(myId, "head", "TraderThree")
+
+----------------------------------------
+
+Some info for working with day and night:
+Purpose and Scope
+
+This document covers the day/night cycle implementation that dynamically adjusts the skybox appearance to simulate the passage of time. The system uses color interpolation and the tick event loop to apply continuous visual transitions to all connected players. For other utility features, see Utility Features.
+
+Note: The original implementation documented here is marked as non-functional due to game engine updates. An alternative inclination-based approach is included as reference material.
+System Overview
+
+The day/night cycle operates through two primary mechanisms:
+
+    Time-based color calculation via getTimeColor() function
+    Per-frame application via the tick() event loop
+
+The system divides a full cycle into 11 distinct time segments, each with specific color transition behavior, and applies these colors as vertex tints to the skybox for all players simultaneously.
+
+Sources:
+txts/DayNight Cycle1-59
+Architecture
+Component Interaction Flow
+
+Sources:
+txts/DayNight Cycle57-59
+Time Color Segmentation
+getTimeColor Function
+
+The getTimeColor function maps a time index (0-9999) to RGB color values through 11 discrete segments:
+Segment	Index Range	Duration	Color Transition	Time of Day
+0	0-909	909 units	White → Orange	Dawn
+1	910-1818	909 units	Orange → Black	Morning Fade
+2-4	1819-4545	2727 units	Black (static)	Night
+5	4546-5454	909 units	Black → Orange	Pre-Dawn
+6	5455-6363	909 units	Orange → White	Sunrise
+7-10	6364-9999	3636 units	White (static)	Day
+
+Sources:
+txts/DayNight Cycle9-56
+Segment Logic Breakdown
+
+Sources:
+txts/DayNight Cycle9-56
+Color Interpolation Formulas
+
+The function implements linear interpolation within each segment using the ratio variable (0.0 to 1.0):
+
+Segment 0 (Dawn):
+
+    r = 255 (constant)
+    g = 255 * (1 - ratio/2) (255 → 127.5)
+    b = 255 * (1 - ratio) (255 → 0)
+
+Segment 1 (Morning Fade):
+
+    r = 255 * (1 - ratio) (255 → 0)
+    g = 255 * (0.5 - ratio/2) (127.5 → 0)
+    b = 0 (constant)
+
+Segments 2-4 (Night):
+
+    All channels = 0 (pure black, no interpolation)
+
+Segment 5 (Pre-Dawn):
+
+    r = 255 * ratio (0 → 255)
+    g = 255 * ratio/2 (0 → 127.5)
+    b = 0 (constant)
+
+Segment 6 (Sunrise):
+
+    r = 255 (constant)
+    g = 255 * (0.5 + ratio/2) (127.5 → 255)
+    b = 255 * ratio (0 → 255)
+
+Segments 7-10 (Day):
+
+    All channels = 255 (pure white, no interpolation)
+
+Sources:
+txts/DayNight Cycle16-54
+Tick Loop Implementation
+Per-Frame Application
+
+The tick function executes every frame and applies the calculated color to all players:
+
+Sources:
+txts/DayNight Cycle57-59
+Cycle Speed Configuration
+
+The cycle duration is controlled by the divisor in the time calculation:
+
+api.now() / 120
+
+Where:
+
+    api.now() returns milliseconds since epoch
+    120 is the speed multiplier (comment: "how long the cycle should last, in multiples of 10 seconds")
+    Result is modulo 10000 to wrap the cycle
+
+Effective Duration: 120 * 10000 ms = 1,200,000 ms = 20 minutes per full cycle
+
+To adjust the cycle speed, modify the divisor:
+
+    Faster cycle: Use a larger divisor (e.g., 240 for 10 minutes)
+    Slower cycle: Use a smaller divisor (e.g., 60 for 40 minutes)
+
+Sources:
+txts/DayNight Cycle58
+API Integration
+setClientOption Method
+
+The system relies on the api.setClientOption method with the following signature:
+
+api.setClientOption(playerId, "skyBox", options)
+
+Parameters:
+
+    playerId: Player identifier from api.getPlayerIds()
+    "skyBox": Option key specifying skybox configuration
+    options: Object with properties:
+        type: "earth" (skybox type)
+        vertexTint: RGB array [r, g, b] with values 0-255
+
+Sources:
+txts/DayNight Cycle58-59
+Alternative Implementation (Inclination-Based)
+
+The file contains commented-out code for an inclination-based approach that manipulates sun position rather than color tinting. This implementation is marked as "UNTESTED NEW CODE".
+Inclination Approach Architecture
+
+Sources:
+txts/DayNight Cycle61-105
+Inclination List Configuration
+
+The alternative implementation defines 25 inclination values ranging from -0.6 to 0.5:
+Phase	Indices	Inclination Range	Interval Duration
+Night	0-4	-0.6 to -0.5	15000 ms each
+Dawn	5-9	-0.45 to -0.25	15000 ms each
+Morning	10-14	-0.2 to 0.05	skySpeed/10 each
+Afternoon	15-19	0.1 to 0.3	skySpeed/10 each
+Sunset	20-24	0.35 to 0.5	15000 ms each
+
+Key Differences:
+
+    Uses delta-time accumulation instead of absolute time
+    Interpolates sun position (inclination) instead of vertex tinting
+    Variable interval durations for different phases
+    Includes additional skybox parameters (turbidity, luminance, azimuth)
+
+Sources:
+txts/DayNight Cycle63-104
+Skybox Configuration Parameters
+
+The inclination-based approach exposes additional skybox configuration:
+Parameter	Value	Purpose
+inclination	-0.6 to 0.5	Sun elevation angle
+turbidity	1	Atmospheric clarity
+luminance	0.75	Sky brightness
+azimuth	0	Sun horizontal angle
+infiniteDistance	3	Background depth
+vertexTint	[255, 255, 255]	Color override (white)
+
+Sources:
+txts/DayNight Cycle94-102
+Implementation Status
+
+Original Color-Based Implementation: Marked as non-functional due to game engine updates. The comment at the top of the file states: "this code no longer works bc of update".
+
+Inclination-Based Alternative: Untested and commented out. May represent a workaround for the engine changes, but requires validation.
+
+Recommended Approach: Developers implementing a day/night cycle should test both approaches to determine compatibility with the current game engine version.
+
+Sources:
+txts/DayNight Cycle1-7
+txts/DayNight Cycle61
+Usage Example
+
+To implement the original color-based cycle (if engine compatibility is restored):
+
+    Define getTimeColor function in global scope
+    Implement tick function with player iteration
+    Adjust cycle speed by modifying the divisor (default: 120)
+    Verify api.setClientOption supports vertexTint parameter
+
+To experiment with the inclination-based approach:
+
+    Uncomment the alternative implementation
+    Remove or comment out the original tick function
+    Test in a world lobby to verify compatibility
+    Adjust skySpeed variable to control cycle duration
+-----------------------------------
+some help when using tick:
+Purpose and Scope
+
+The tick function is the continuous update loop in Bloxd.io world code that executes every game frame (approximately 20 times per second). It provides per-frame logic for systems requiring ongoing computation independent of player actions, including cooldown timers, state validation, animation rendering, and player monitoring.
+
+This page documents the tick loop's implementation patterns, registration methods, and integration with the event-driven architecture. For event handler documentation, see Event System. For specific API methods used within tick handlers, see API Reference.
+Overview
+
+The tick function operates as a continuous execution loop that complements the event-driven architecture. While event handlers respond to discrete player actions (clicks, movement, damage), the tick loop handles time-based logic that must execute regardless of player input.
+
+Core characteristics:
+Property	Description
+Execution Frequency	~20 times per second (50ms intervals)
+Registration	Via api.onTick(callback) or direct function tick() definition
+Execution Context	Runs for all active players simultaneously
+Common Uses	Cooldowns, animations, state decay, monitoring, validation
+Performance Concern	Must complete within frame budget to avoid lag
+
+Sources:
+CPScounter.js176-204
+mace.js367-415
+randomcodes.js88-111
+Registration Methods
+Method 1: Direct Function Definition
+
+The most common pattern defines a global tick function that the game engine automatically invokes each frame:
+
+function tick() {
+    // Per-frame logic
+    const players = api.getPlayerIds();
+    for (const playerId of players) {
+        // Process each player
+    }
+}
+
+This pattern is used in
+mace.js367-415 and
+CPScounter.js176-204
+Method 2: API Callback Registration
+
+For modular or multiple tick handlers, use api.onTick():
+
+api.onTick(() => {
+    for (const playerId in totemAnimations) {
+        const anim = totemAnimations[playerId];
+        // Update animation frame
+    }
+});
+
+This pattern is demonstrated in
+randomcodes.js88-111 for totem animation rendering.
+
+Comparison:
+Aspect	Direct function tick()	api.onTick(callback)
+Use Case	Single centralized tick handler	Multiple independent tick handlers
+Scope	Global world logic	Isolated feature logic
+Conflicts	Only one allowed per world	Multiple can coexist
+
+Sources:
+mace.js367
+randomcodes.js88
+CPScounter.js176
+Tick Function Architecture
+
+Sources:
+mace.js367-415
+CPScounter.js176-204
+randomcodes.js88-111
+Common Use Cases
+Cooldown Management
+
+Tick loops decrement cooldown timers for weapon abilities and item usage. Multiple cooldown dictionaries track different ability types:
+
+Pattern:
+
+function tick() {
+    cnt += 1;
+    const players = api.getPlayerIds();
+    
+    for (let i = 0; i < players.length; i++) {
+        const playerId = players[i];
+        
+        // Decrement every 10 ticks (0.5 seconds)
+        if (cnt % 10 === 0) {
+            if (cooldown[playerId] > 0) {
+                cooldown[playerId] -= 1;
+            }
+            if (cooldownL[playerId] > 0) {
+                cooldownL[playerId] -= 1;
+            }
+        }
+    }
+}
+
+Cooldown Types in Mace System:
+Dictionary	Purpose	Reset Trigger	Duration Range
+cooldown[playerId]	Primary weapon cooldown	Mace hit	2 ticks (0.1s)
+cooldownL[playerId]	Lifesteal weapon cooldown	Lifesteal Scythe hit	8 ticks (0.4s)
+cooldownU[playerId]	"Unflyable" state cooldown	Mace knockback	40 ticks (2s)
+cooldownF[playerId]	Additional cooldown slot	Unknown trigger	Variable
+
+Sources:
+mace.js367-415
+mace.js104-108
+mace.js351-353
+State Tracking and Validation
+
+The tick loop continuously tracks player state that changes frame-by-frame, particularly position and height for fall damage calculations:
+
+Implementation:
+
+The tick loop in
+mace.js384-398 demonstrates state tracking:
+
+    Stores player metadata including position and kill streak
+    Tracks maximum Y coordinate reached (heights[playerId])
+    Enforces height limits during "Unflyable" status
+    Prevents upward movement when cooldown is active
+
+Sources:
+mace.js384-398
+mace.js416-421
+Animation Systems
+
+Frame-based animations use tick loops to update opacity, position, or other visual properties over time:
+
+Totem Animation Pattern:
+
+const totemAnimations = {};
+ 
+api.onTick(() => {
+    for (const playerId in totemAnimations) {
+        const anim = totemAnimations[playerId];
+        const frame = anim.frames[anim.frame];
+        
+        // Display current frame
+        api.sendFlyingMiddleMessage(playerId, [
+            { icon: "totem", style: { opacity: frame.opacity } }
+        ], frame.duration * 50);
+        
+        anim.ticks++;
+        
+        // Advance to next frame
+        if (anim.ticks >= frame.duration) {
+            anim.frame++;
+            anim.ticks = 0;
+            
+            // Clean up completed animations
+            if (anim.frame >= anim.frames.length) {
+                delete totemAnimations[playerId];
+            }
+        }
+    }
+});
+
+Animation State Structure:
+Property	Type	Purpose
+frame	number	Current frame index (0-based)
+ticks	number	Ticks elapsed in current frame
+frames	Array<{opacity, duration}>	Frame definitions with timing
+
+Sources:
+randomcodes.js70-111
+Anti-Cheat and Monitoring
+
+The tick loop implements continuous monitoring for suspicious player behavior:
+
+CPS Anti-Cheat System:
+
+CPS Monitoring Implementation:
+
+The system in
+CPScounter.js176-204 performs:
+
+    Click filtering: Removes clicks older than 1 second
+    Decay logic: Reduces displayed CPS after 2 seconds of inactivity
+    Threshold check: Kicks players exceeding 40 CPS (unless whitelisted)
+    GUI updates: Refreshes all player displays with current CPS values
+
+Whitelist Configuration:
+
+const banBypass = new Set([
+    "M1DNIGHT_SV", "x_voidscythe"
+]);
+
+Sources:
+CPScounter.js176-204
+CPScounter.js8-10
+CPScounter.js197-199
+Implementation Patterns
+Pattern 1: Player Iteration with State Management
+
+The most common tick pattern iterates through all players and updates per-player state:
+
+Code Structure:
+
+function tick() {
+    cnt += 1;  // Global frame counter
+    const players = api.getPlayerIds();
+    
+    for (let i = 0; i < players.length; i++) {
+        const playerId = players[i];
+        
+        // State queries
+        const position = api.getPosition(playerId);
+        const effects = api.getEffects(playerId);
+        const slot = api.getItemSlot(playerId, api.getSelectedInventorySlotI(playerId));
+        
+        // State updates
+        playerMeta[playerId] = { pos: position, killStreak: api.getCurrentKillstreak(playerId) };
+        
+        // Conditional logic
+        if (cooldownU[playerId] > 0) {
+            cooldownU[playerId] -= 1;
+            // Enforce height constraint
+        }
+        
+        // Periodic updates (every N ticks)
+        if (cnt % 10 === 0) {
+            if (cooldown[playerId] > 0) {
+                cooldown[playerId] -= 1;
+            }
+        }
+    }
+}
+
+Sources:
+mace.js367-415
+Pattern 2: Shield Generator Visual Updates
+
+Conditional mesh attachment based on player state:
+
+Logic Flow:
+Condition	Item Check	Effect Check	Result
+Crouching	Shield Generator held	No Shield Cooldown	Attach "Aspen Door" mesh to head
+Crouching	Other item	N/A	Attach "Air" (remove mesh)
+Not crouching	N/A	N/A	Attach "Air" (remove mesh)
+
+Implementation:
+
+if (api.isPlayerCrouching(players[i]) && !api.getEffects(players[i]).includes("Shield Cooldown")) {
+    sel = api.getItemSlot(players[i], api.getSelectedInventorySlotI(players[i]));
+    
+    if (sel && sel.attributes.customDisplayName === "Shield Generator") {
+        api.updateEntityNodeMeshAttachment(players[i], "HeadMesh", "BloxdBlock", 
+            {blockName: "Aspen Door", size: 0.8, meshOffset: [0, 0, 0]}, 
+            [0, -0.4, 0.8], [0, 0, 0]);
+    } else {
+        api.updateEntityNodeMeshAttachment(players[i], "HeadMesh", "BloxdBlock", 
+            {blockName: "Air", size: 0.8, meshOffset: [0, 0, 0]}, 
+            [0, 0, 0], [0, 0, 0]);
+    }
+} else {
+    // Remove shield visual
+    api.updateEntityNodeMeshAttachment(players[i], "HeadMesh", "BloxdBlock", 
+        {blockName: "Air", size: 0.8, meshOffset: [0, 0, 0]}, 
+        [0, 0, 0], [0, 0, 0]);
+}
+
+Sources:
+mace.js371-383
+Pattern 3: Conditional Frame-Rate Operations
+
+Some operations execute only on specific tick intervals to reduce computational load:
+
+function tick() {
+    cnt += 1;
+    
+    // Every 10 ticks (0.5 seconds)
+    if (cnt % 10 === 0) {
+        // Cooldown decrements
+        if (cooldown[playerId] > 0) {
+            cooldown[playerId] -= 1;
+        }
+        if (cooldownL[playerId] > 0) {
+            cooldownL[playerId] -= 1;
+        }
+    }
+}
+
+Timing Table:
+Modulo Check	Real Time	Use Case
+cnt % 1 === 0	Every frame (~50ms)	Critical position validation
+cnt % 10 === 0	Every 0.5s	Cooldown decrements
+cnt % 20 === 0	Every 1s	Periodic checks, slower updates
+
+Sources:
+mace.js400-410
+State Management in Tick Loops
+Global State Dictionaries
+
+Tick functions access and modify global state dictionaries keyed by player ID:
+
+State Dictionary Patterns:
+System	Dictionary Name	Key Type	Value Type	Initialized In
+Mace	cooldown	string (playerId)	number	onPlayerJoin
+Mace	heights	string (playerId)	number	onPlayerJoin
+Mace	combo	string (playerId)	number	onBlockStand
+CPS Counter	playerCPS	string (playerId)	object	onPlayerClick
+Totem Anim	totemAnimations	string (playerId)	object	playTotemAnimation()
+
+Sources:
+mace.js94-109
+CPScounter.js12
+randomcodes.js71
+Performance Considerations
+Frame Budget
+
+Each tick execution must complete within the frame time budget (~50ms at 20 Hz) to avoid lag. Expensive operations should be:
+
+    Throttled using modulo checks (cnt % N === 0)
+    Limited to only active/relevant players
+    Cached when possible
+
+Optimization Techniques
+
+1. Conditional Processing:
+
+// Bad: Always processes all players
+for (const playerId of players) {
+    if (cooldown[playerId] > 0) {
+        cooldown[playerId] -= 1;
+    }
+}
+ 
+// Good: Only processes every 10 ticks
+if (cnt % 10 === 0) {
+    for (const playerId of players) {
+        if (cooldown[playerId] > 0) {
+            cooldown[playerId] -= 1;
+        }
+    }
+}
+
+2. Early Exit:
+
+// Skip players without relevant state
+const data = playerCPS[playerId];
+if (!data) continue;
+
+3. Lazy GUI Updates:
+
+// Update all GUIs once per tick, not per player
+for (const playerId of api.getPlayerIds()) {
+    // ... process each player
+}
+UpdateAllPlayerGui();  // Single batch update
+
+Performance Metrics
+Operation	Estimated Cost	Frequency Recommendation
+api.getPlayerIds()	Low	Every tick
+api.getPosition(playerId)	Low	Every tick (if needed)
+api.getItemSlot(playerId, slot)	Low-Medium	Every tick (cached result)
+api.getEffects(playerId)	Low-Medium	Every tick (if needed)
+api.updateEntityNodeMeshAttachment()	Medium	Conditional only
+api.setClientOption()	Medium-High	Every 5-10 ticks
+api.playParticleEffect()	High	Sparingly, event-driven preferred
+
+Sources:
+mace.js367-415
+CPScounter.js176-204
+Integration with Event Handlers
+
+The tick loop and event handlers form a complementary architecture:
+
+Interaction Pattern:
+
+    Event Handler sets initial state (e.g., cooldown[playerId] = 2)
+    Tick Loop decrements state over time (e.g., cooldown[playerId] -= 1)
+    Event Handler checks state before allowing action (e.g., if (cooldown[playerId] === 0))
+    Tick Loop validates and enforces constraints (e.g., height limits during Unflyable)
+
+Example: Mace Cooldown Flow
+Step	Handler/Function	Operation	State Change
+1	onPlayerDamagingOtherPlayer	Mace hits enemy	cooldown[attacker] = 2
+2	tick() (every 10 ticks)	Time passes	cooldown[attacker] = 1
+3	tick() (every 10 ticks)	More time passes	cooldown[attacker] = 0
+4	onPlayerDamagingOtherPlayer	Next hit allowed	Damage applied
+
+Sources:
+mace.js268-366
+mace.js367-415
+mace.js351-353
+Complete Tick Function Examples
+Example 1: Mace System Tick Handler
+
+mace.js367-415 demonstrates a comprehensive tick implementation:
+
+Features:
+
+    Player iteration with position tracking
+    Multiple cooldown decrements on interval
+    Shield generator visual updates
+    Height constraint enforcement during Unflyable state
+    Metadata updates (position, kill streak)
+
+State Modified:
+
+    cooldown[playerId], cooldownL[playerId], cooldownU[playerId]
+    heights[playerId]
+    playerMeta[playerId]
+
+Example 2: CPS Counter Tick Handler
+
+CPScounter.js176-204 demonstrates anti-cheat and monitoring:
+
+Features:
+
+    Click history filtering (1-second window)
+    CPS decay after inactivity (2-second threshold)
+    Anti-cheat threshold enforcement (40 CPS)
+    Whitelist bypass for specific players
+    Global GUI updates
+
+State Modified:
+
+    playerCPS[playerId].clicks
+    playerCPS[playerId].lastCPS
+    playerCPS[playerId].lastDecayTime
+
+Example 3: Totem Animation Tick Handler
+
+randomcodes.js88-111 demonstrates frame-based animation:
+
+Features:
+
+    Per-player animation state tracking
+    Frame progression with tick-based timing
+    Opacity gradient rendering
+    Automatic cleanup of completed animations
+
+State Modified:
+
+    totemAnimations[playerId].frame
+    totemAnimations[playerId].ticks
+    Deletion of completed animation entries
+---------------------------------------------
+Some help when working with permissions:
+The Permission System is a four-layer authorization framework that controls what actions players can perform in the game world. It governs block modification, item interactions, entity combat, mob spawning, crafting, and other player-initiated actions through a hierarchical evaluation model. This system enables game developers to implement fine-grained access control ranging from global restrictions to position-specific rules.
+
+For information about configuring player capabilities through settings, see Client Options. For entity-specific visibility and combat rules, see Entity Settings. For information about combat mechanics beyond permissions, see Combat System.
+Architecture Overview
+
+The Permission System evaluates player actions through four sequential layers, with each layer providing progressively more granular control. An action must pass all applicable layers to succeed.
+
+Sources: Diagram 6 from architecture overview,
+Client Options.md1-880
+Entity Settings.md1-206
+Callbacks.md1-763
+API.md1352-1473
+Layer 1: Client Option Gates
+
+Client Options provide coarse-grained boolean flags that enable or disable entire categories of actions for a player. These are the first and fastest permission checks.
+Core Permission Options
+Client Option	Default	Purpose	Error Message Option
+canChange	true	Controls block placement and breaking	cantChangeError
+canCraft	true	Controls item crafting (requires useFullInventory)	N/A
+canPickUpItems	true	Controls item pickup from ground	N/A
+canAltAction	true	Controls right-click actions	N/A
+invincible	false	Prevents all damage (overrides Layer 4)	N/A
+API Functions
+
+// Set a single option
+api.setClientOption(playerId, "canChange", false)
+ 
+// Set multiple options at once
+api.setClientOptions(playerId, {
+    canChange: false,
+    canCraft: false,
+    canPickUpItems: false
+})
+ 
+// Get current value
+const canBuild = api.getClientOption(playerId, "canChange")
+ 
+// Reset to default
+api.setClientOptionToDefault(playerId, "canChange")
+
+Error Messages
+
+When a client option prevents an action, optional error messages can be displayed:
+
+// Configure custom error messages
+api.setClientOptions(playerId, {
+    canChange: false,
+    cantChangeError: "You are in spectator mode!",
+    cantBreakError: "Breaking is disabled in this area",
+    cantBuildError: "Building is disabled during combat"
+})
+
+Sources:
+Client Options.md57-153
+API.md589-630
+Layer 2: Spatial and Type-Based Rules
+
+Layer 2 provides position-specific and block-type-specific permissions that override Layer 1 settings. This layer enables complex zoning systems without requiring callback logic.
+Permission Types and Priority
+
+Rules are evaluated in priority order (highest to lowest):
+
+Position-Specific Rules
+
+The highest priority rules apply to individual block coordinates:
+
+// Allow a player to modify a specific block
+api.setCanChangeBlock(playerId, 10, 20, 30)
+ 
+// Prevent a player from modifying a specific block
+api.setCantChangeBlock(playerId, 10, 20, 30)
+
+Use Case: Protecting spawn points, puzzle elements, or specific structures.
+Rectangle Region Rules
+
+Region rules apply to all blocks within a cuboid defined by two corners (coordinates are inclusive):
+
+// Allow modification within a region
+api.setCanChangeBlockRect(playerId, [0, 0, 0], [100, 50, 100])
+ 
+// Prevent modification within a region
+api.setCantChangeBlockRect(playerId, [-50, 0, -50], [50, 100, 50])
+ 
+// Remove a region rule
+api.resetCanChangeBlockRect(playerId, [0, 0, 0], [100, 50, 100])
+
+Use Case: Protected spawn areas, building zones, PvP arenas, or no-build regions.
+Block Type Rules
+
+Type rules apply globally to all blocks of a specific type:
+
+// Allow breaking a specific block type
+api.setCanChangeBlockType(playerId, "Bedrock")
+ 
+// Prevent breaking a specific block type
+api.setCantChangeBlockType(playerId, "Moonstone Ore")
+ 
+// Remove a type rule
+api.resetCanChangeBlockType(playerId, "Bedrock")
+
+Use Case: Protecting important resources, preventing griefing of certain blocks, or creating block-specific permissions.
+Complex Permission Example
+
+// Example: Create a protected spawn with building zones
+const spawnProtection = [[-100, 0, -100], [100, 100, 100]]
+const buildingZone = [[-50, 0, -50], [-10, 50, -10]]
+ 
+onPlayerJoin = (playerId) => {
+    // Global: no building
+    api.setClientOption(playerId, "canChange", false)
+    
+    // Spawn: explicitly deny all changes (highest priority)
+    api.setCantChangeBlockRect(playerId, spawnProtection[0], spawnProtection[1])
+    
+    // Building zone: allow changes (overrides cantChangeBlockRect for this region)
+    api.setCanChangeBlockRect(playerId, buildingZone[0], buildingZone[1])
+    
+    // Exception: Never allow bedrock modification
+    api.setCantChangeBlockType(playerId, "Bedrock")
+}
+
+Sources:
+API.md1342-1473 Diagram 6 from architecture overview
+Layer 3: Callback-Based Validation
+
+Callbacks provide programmable authorization logic that executes when players attempt actions. This layer enables dynamic permissions based on game state, player properties, or custom conditions.
+Callback Categories
+
+Return Value System
+
+Callbacks communicate permission decisions through specific return values:
+Action Type	Return Value	Effect
+Crafting	"preventCraft"	Blocks the craft attempt
+Block Change	"preventChange"	Blocks the block modification
+Block Change	"preventDrop"	Allows change but no item drop
+Item Drop	"preventDrop"	Blocks the drop entirely
+Item Drop	"allowButNoDroppedItemCreated"	Removes item without creating drop
+Combat	"preventDamage"	Blocks damage application
+Combat	number	Modifies damage to specified amount
+Death	"preventDeath"	Prevents player death
+Chest	"preventOpen"	Blocks chest access
+Mob	"preventSpawn"	Blocks mob spawning
+Mob	"preventDespawn"	Blocks mob despawning
+Alt Action	"preventAction"	Blocks right-click action
+Block Modification Callbacks
+
+// Example: Prevent breaking blocks in protected areas
+onPlayerChangeBlock = (playerId, x, y, z, fromBlock, toBlock, droppedItem) => {
+    // Check if player is breaking a block (toBlock is "Air")
+    if (toBlock === "Air") {
+        const isInProtectedZone = api.isInsideRect([x, y, z], [-50, 0, -50], [50, 100, 50])
+        
+        if (isInProtectedZone && !isPlayerAdmin(playerId)) {
+            api.sendMessage(playerId, "You cannot break blocks in the protected zone!")
+            return "preventChange"
+        }
+    }
+    
+    // Allow the change but prevent item drop for certain blocks
+    if (fromBlock === "Moonstone Ore" && !hasPermission(playerId, "mining")) {
+        return "preventDrop"
+    }
+}
+ 
+// World-initiated changes (sapling growth, ice melting, etc.)
+onWorldChangeBlock = (x, y, z, fromBlock, toBlock, initiatorDbId, extraInfo) => {
+    // initiatorDbId is null for game-initiated changes
+    if (extraInfo?.cause === "Explosion" && isProtectedStructure(x, y, z)) {
+        return "preventChange"
+    }
+}
+
+Crafting Callbacks
+
+// Example: Restrict crafting based on player level
+onPlayerAttemptCraft = (playerId, itemName, craftingIdx, craftTimes) => {
+    const playerLevel = getPlayerLevel(playerId)
+    const requiredLevel = itemLevelRequirements[itemName] || 0
+    
+    if (playerLevel < requiredLevel) {
+        api.sendMessage(playerId, `You need level ${requiredLevel} to craft ${itemName}`)
+        return "preventCraft"
+    }
+}
+
+Combat Callbacks
+
+// Example: Safe zones and damage modification
+onPlayerDamagingOtherPlayer = (attackerId, victimId, damageDealt, withItem, bodyPartHit, damagerDbId) => {
+    const victimPos = api.getPosition(victimId)
+    
+    // Prevent damage in safe zones
+    if (isInSafeZone(victimPos)) {
+        api.sendMessage(attackerId, "Combat is disabled in safe zones!")
+        return "preventDamage"
+    }
+    
+    // Double damage for headshots
+    if (bodyPartHit === "head") {
+        return damageDealt * 2
+    }
+}
+ 
+// Prevent player death for revival mechanics
+onAttemptKillPlayer = (killedPlayer, attackingLifeform) => {
+    const hasReviveToken = api.hasItem(killedPlayer, "Revive Token")
+    
+    if (hasReviveToken) {
+        api.removeItemName(killedPlayer, "Revive Token", 1)
+        api.setHealth(killedPlayer, 50)
+        api.sendMessage(killedPlayer, "You used a Revive Token!")
+        return "preventDeath"
+    }
+}
+
+Chest and Interaction Callbacks
+
+// Example: Key-based chest access
+onPlayerAttemptOpenChest = (playerId, x, y, z, isMoonstoneChest, isIronChest) => {
+    if (isSpecialChest(x, y, z)) {
+        if (!api.hasItem(playerId, "Special Key")) {
+            api.sendMessage(playerId, "This chest requires a Special Key!")
+            return "preventOpen"
+        }
+    }
+}
+ 
+// Example: Conditional alt actions
+onPlayerAttemptAltAction = (playerId, x, y, z, block, targetEId) => {
+    // Prevent opening doors in lockdown mode
+    if (isInLockdown && block.includes("Door")) {
+        api.sendMessage(playerId, "Doors are locked during lockdown!")
+        return "preventAction"
+    }
+}
+
+Mob Spawn/Despawn Callbacks
+
+// Example: Limit mob spawning in certain areas
+onPlayerAttemptSpawnMob = (playerId, mobType, x, y, z) => {
+    if (mobType === "Spirit Dragon" && !isPlayerVIP(playerId)) {
+        api.sendMessage(playerId, "Only VIPs can spawn Spirit Dragons!")
+        return "preventSpawn"
+    }
+}
+ 
+onWorldAttemptDespawnMob = (mobId) => {
+    // Prevent despawning of named/important mobs
+    if (namedMobs.has(mobId)) {
+        return "preventDespawn"
+    }
+}
+
+Sources:
+Callbacks.md124-763 Diagram 6 from architecture overview
+Layer 4: Entity-Specific Permissions
+
+Entity Settings create asymmetric permissions where Player A's view of and interactions with Player B can differ from Player B's view of Player A. This layer is evaluated last and can override earlier layers.
+Entity Settings for Combat
+
+Combat Permissions
+
+The canAttack entity setting controls whether one entity can damage another. The invincible client option overrides this setting.
+
+// Make Player A unable to attack Player B
+api.setOtherEntitySetting(playerA, playerB, "canAttack", false)
+ 
+// Make Player A unable to attack anyone
+api.setEveryoneSettingForPlayer(playerA, "canAttack", false, true)
+ 
+// Make no one able to attack Player B (god mode)
+api.setTargetedPlayerSettingForEveryone(playerB, "canAttack", false, true)
+ 
+// Alternative: Use invincible client option (simpler)
+api.setClientOption(playerB, "invincible", true)
+
+Priority Note: The invincible client option (Layer 1) takes precedence over canAttack entity settings.
+Visibility Permissions
+
+The canSee setting controls whether an entity is visible to a player:
+
+// Make Player B invisible to Player A
+api.setOtherEntitySetting(playerA, playerB, "canSee", false)
+ 
+// Make Player A see no one (blind effect)
+api.setEveryoneSettingForPlayer(playerA, "canSee", false, true)
+ 
+// Make Player B invisible to everyone (stealth mode)
+api.setTargetedPlayerSettingForEveryone(playerB, "canSee", false, true)
+
+Note: Setting opacity to 0 also hides entities and their nametags, providing an alternative to canSee.
+Advanced Entity Settings
+
+Entity Settings provide additional per-entity customization beyond permissions:
+
+// Configure multiple settings at once
+api.setOtherEntitySettings(playerA, playerB, {
+    canAttack: false,        // Can't attack
+    canSee: true,            // Can see
+    opacity: 0.5,            // Semi-transparent
+    showDamageAmounts: false // Hide damage numbers
+})
+
+Team-Based Permissions Example
+
+// Example: Implement team system with asymmetric permissions
+const teams = {
+    red: new Set(),
+    blue: new Set()
+}
+ 
+function setPlayerTeam(playerId, team) {
+    teams[team].add(playerId)
+    
+    // Configure permissions for all existing players
+    api.getPlayerIds().forEach(otherId => {
+        if (otherId === playerId) return
+        
+        const otherTeam = getPlayerTeam(otherId)
+        const areTeammates = (otherTeam === team)
+        
+        // Teammates can't attack each other
+        api.setOtherEntitySetting(playerId, otherId, "canAttack", !areTeammates)
+        api.setOtherEntitySetting(otherId, playerId, "canAttack", !areTeammates)
+    })
+}
+ 
+onPlayerJoin = (playerId) => {
+    // includeNewJoiners: true ensures settings persist for future joins
+    api.setEveryoneSettingForPlayer(playerId, "canAttack", false, true)
+}
+
+Sources:
+Entity Settings.md1-206
+API.md218-251
+API.md633-658 Diagram 6 from architecture overview
+Permission Resolution Order
+
+Different permission systems interact with specific evaluation orders. Understanding these flows is critical for implementing complex permission schemes.
+Block Modification Flow
+
+Item Pickup Flow
+
+Combat Flow
+
+Sources: Diagram 6 from architecture overview,
+Client Options.md57-153
+Entity Settings.md88-113
+Callbacks.md124-577
+API.md1342-1473
+Item-Specific Permissions
+
+Individual item drops can be protected from specific players using the entity ID returned by createItemDrop:
+
+// Create an item drop and prevent a player from picking it up
+const itemDropId = api.createItemDrop(10, 20, 30, "Diamond Sword", 1)
+api.setCantPickUpItem(playerId, itemDropId)
+ 
+// Example: Create player-specific loot
+onPlayerKilledOtherPlayer = (attackerId, victimId, damageDealt, withItem) => {
+    const victimPos = api.getPosition(victimId)
+    
+    // Drop special item only attackerId can pick up
+    const specialLoot = api.createItemDrop(
+        victimPos[0], victimPos[1], victimPos[2],
+        "Victory Trophy", 1
+    )
+    
+    // Prevent all other players from picking it up
+    api.getPlayerIds().forEach(pId => {
+        if (pId !== attackerId) {
+            api.setCantPickUpItem(pId, specialLoot)
+        }
+    })
+    
+    return "keepInventory"
+}
+
+Sources:
+API.md1522-1552
+Common Patterns and Best Practices
+Pattern 1: Protected Regions with Exceptions
+
+// Global disable with regional enable
+onPlayerJoin = (playerId) => {
+    // Default: no building
+    api.setClientOption(playerId, "canChange", false)
+    
+    // Allow building in player's plot
+    const plotCoords = getPlayerPlotCoordinates(playerId)
+    api.setCanChangeBlockRect(playerId, plotCoords[0], plotCoords[1])
+    
+    // But never allow bedrock changes
+    api.setCantChangeBlockType(playerId, "Bedrock")
+}
+
+Pattern 2: Dynamic Permissions Based on Game State
+
+let isInCombat = {}
+ 
+onPlayerDamagingOtherPlayer = (attackerId, victimId) => {
+    // Mark both players as in combat
+    isInCombat[attackerId] = api.now() + 30000 // 30 seconds
+    isInCombat[victimId] = api.now() + 30000
+}
+ 
+tick = () => {
+    const now = api.now()
+    
+    // Remove expired combat flags and restore permissions
+    for (const playerId in isInCombat) {
+        if (isInCombat[playerId] < now) {
+            delete isInCombat[playerId]
+            api.setClientOption(playerId, "canChange", true)
+        } else {
+            // Players in combat can't build
+            api.setClientOption(playerId, "canChange", false)
+        }
+    }
+}
+
+Pattern 3: Rank-Based Permissions
+
+const rankPermissions = {
+    guest: {
+        canChange: false,
+        canCraft: false,
+        canPickUpItems: true
+    },
+    member: {
+        canChange: true,
+        canCraft: true,
+        canPickUpItems: true
+    },
+    moderator: {
+        canChange: true,
+        canCraft: true,
+        canPickUpItems: true
+    }
+}
+ 
+function applyRankPermissions(playerId, rank) {
+    const perms = rankPermissions[rank]
+    api.setClientOptions(playerId, perms)
+    
+    // Moderators can break any block type
+    if (rank === "moderator") {
+        // No type restrictions
+    } else {
+        // Members and guests can't break ore
+        api.setCantChangeBlockType(playerId, "Moonstone Ore")
+        api.setCantChangeBlockType(playerId, "Diamond Ore")
+    }
+}
+
+Pattern 4: Stealth and Visibility Systems
+
+function enableStealthMode(playerId) {
+    // Make player invisible to others
+    api.setTargetedPlayerSettingForEveryone(playerId, "canSee", false, false)
+    api.setTargetedPlayerSettingForEveryone(playerId, "opacity", 0, false)
+    
+    // Make player unable to attack (can't attack while stealthed)
+    api.setEveryoneSettingForPlayer(playerId, "canAttack", false, false)
+    
+    api.sendMessage(playerId, "You are now in stealth mode!")
+}
+ 
+function disableStealthMode(playerId) {
+    // Make player visible again
+    api.setTargetedPlayerSettingForEveryone(playerId, "canSee", true, false)
+    api.setTargetedPlayerSettingForEveryone(playerId, "opacity", 1, false)
+    
+    // Restore combat ability
+    api.setEveryoneSettingForPlayer(playerId, "canAttack", true, false)
+    
+    api.sendMessage(playerId, "Stealth mode disabled!")
+}
+
+Pattern 5: Callback-Based Conditional Logic
+
+// Example: Tool requirements for breaking blocks
+const blockToolRequirements = {
+    "Moonstone Ore": "Moonstone Pickaxe",
+    "Diamond Ore": "Iron Pickaxe",
+    "Bedrock": null // Can never be broken
+}
+ 
+onPlayerChangeBlock = (playerId, x, y, z, fromBlock, toBlock, droppedItem) => {
+    // Check if breaking a block
+    if (toBlock !== "Air") return
+    
+    const requiredTool = blockToolRequirements[fromBlock]
+    
+    // Bedrock is never breakable
+    if (requiredTool === null) {
+        api.sendMessage(playerId, "This block cannot be broken!")
+        return "preventChange"
+    }
+    
+    // Check if player has required tool
+    if (requiredTool) {
+        const heldItem = api.getHeldItem(playerId)
+        if (!heldItem || heldItem.name !== requiredTool) {
+            api.sendMessage(playerId, `You need a ${requiredTool} to break this!`)
+            return "preventChange"
+        }
+    }
+}
+
+Performance Considerations
+
+    Prefer Client Options over Callbacks: Client options (Layer 1) are much faster than callback evaluations. Use canChange, canCraft, etc. when possible.
+
+    Use Type Rules over Position Rules: setCanChangeBlockType is more efficient than calling setCantChangeBlock for thousands of individual positions.
+
+    Minimize Callback Complexity: Callbacks execute synchronously and can impact server performance if they contain expensive operations.
+
+    Cache Expensive Lookups: If callbacks need to check external data structures, cache results when possible:
+
+// Bad: O(n) lookup every block change
+onPlayerChangeBlock = (playerId, x, y, z) => {
+    if (protectedBlocks.find(b => b.x === x && b.y === y && b.z === z)) {
+        return "preventChange"
+    }
+}
+ 
+// Good: O(1) lookup using string keys
+const protectedBlockSet = new Set()
+protectedBlocks.forEach(b => protectedBlockSet.add(`${b.x},${b.y},${b.z}`))
+ 
+onPlayerChangeBlock = (playerId, x, y, z) => {
+    if (protectedBlockSet.has(`${x},${y},${z}`)) {
+        return "preventChange"
+    }
+}
+
+Sources:
+Client Options.md1-880
+Entity Settings.md1-206
+Callbacks.md1-763
+API.md1342-1473 Diagram 6 from architecture overview 
+-------------------------------
+
